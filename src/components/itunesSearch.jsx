@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 // iTunes Search API
 // https://itunes.apple.com/search?term=SEARCH_TERM&media=music&limit=10
@@ -30,6 +30,7 @@ function TrackCard({ title, artist, album, image, genre }) {
         <p style={{ fontWeight: "500", fontSize: "14px", margin: "0 0 4px" }}>{title}</p>
         <p style={{ fontSize: "12px", color: "#888", margin: "0 0 2px" }}>{artist}</p>
         <p style={{ fontSize: "11px", color: "#aaa", margin: 0 }}>{genre}</p>
+        <p style={{ fontSize: "11px", color: "#aaa", margin: "0 0 2px" }}>{album}</p>
       </div>
     </div>
   );
@@ -40,7 +41,10 @@ export default function ItunesSearch() {
   const [searchTerm, setSearchTerm] = useState("");
 
   // TODO 1: Declare state variables for tracks, loading, and error
-
+  const [tracks, setTracks] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [query, setQuery] = useState("");
   // TODO 2: Write a useEffect that fetches when the component mounts
   //         OR write a handleSearch function that fetches on form submit
   //         - Build the URL using searchTerm
@@ -48,12 +52,43 @@ export default function ItunesSearch() {
   //         - Check response.ok before parsing JSON
   //         - The tracks live in response.results
 
+  useEffect(()=>{
+    if(!query.trim()){
+      setTracks([]);
+      setError("");
+      return;
+    }
+
+    async function fetchTracks(){
+      try{
+        setLoading(true);
+        setError("");
+
+        const url= `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&media=music&limit=10`;//convert search text into a safe format for a URL
+        const response = await fetch(url);
+
+        if(!response.ok){
+          throw new Error("Unable to fetch tracks right now.");
+        }
+
+        const data = await response.json();
+        setTracks(data.results);
+      }catch(err){
+        setError(err.message || "Something went wrong.");
+        setTracks([]);
+      }finally{
+        setLoading(false);
+      }
+    }
+    fetchTracks();
+  }, [query]);
+
   // TODO 3: Handle loading state — render a loading indicator
   // TODO 4: Handle error state — render an error message
 
   function handleSearch(e) {
     e.preventDefault();
-    // TODO: trigger your fetch here
+    setQuery(searchTerm);
   }
 
   return (
@@ -79,6 +114,7 @@ export default function ItunesSearch() {
             fontSize: "14px",
           }}
         />
+
         <button
           type="submit"
           style={{
@@ -95,10 +131,23 @@ export default function ItunesSearch() {
         </button>
       </form>
 
+      {loading && <p>Loading...</p>}
+      {error && <p>{error}</p>}
+
       {/* TODO 5: Render TrackCards here once you have data
                  Use a .map() over your tracks state
                  Pass title, artist, album, image, genre as props to each TrackCard */}
       <div style={{ display: "flex", flexWrap: "wrap", gap: "16px" }}>
+        {tracks.map((track)=>(
+          <TrackCard
+          key={track.trackId}
+          title={track.trackName}
+          artist={track.artistName}
+          album={track.collectionName}
+          image={track.artworkUrl100}
+          genre={track.primaryGenreName}
+          />
+        ))}
 
       </div>
 
